@@ -4,6 +4,7 @@ import (
 	"../database"
 	"fmt"
 	"../config"
+	"log"
 )
 
 type Article struct {
@@ -87,3 +88,57 @@ func SetArticleRowsNum()  {
 }
 
 //----------查询文章-------------
+func QueryArticleWithId(id int) Article {
+	art := Article{}
+	db := database.GetDB()
+	db.First(&art,id)
+	return art
+}
+
+//----------修改数据----------
+
+func UpdateArticle(article Article) error {
+	db := database.GetDB()
+	db = db.Model(&article).Updates(article)
+	return db.Error
+}
+
+//----------删除文章---------
+func DeleteArticle(artID int) error {
+	db := database.GetDB()
+	db = db.Unscoped().Delete(&Article{},"id = ?",artID)
+	return db.Error
+}
+
+//查询标签，返回一个字段的列表
+func QueryArticleWithParam(param string) []string {
+	db := database.GetDB()
+	paramList := []string{}
+	db = db.Model(&Article{}).Select(param).Find(&paramList);if db.Error != nil {
+		log.Println(db.Error)
+	}
+	return paramList
+}
+
+//--------------按照标签查询--------------
+/*
+通过标签查询首页的数据
+有四种情况
+	1.左右两边有&符和其他符号
+	2.左边有&符号和其他符号，同时右边没有任何符号
+	3.右边有&符号和其他符号，同时左边没有任何符号
+	4.左右两边都没有符号
+
+通过%去匹配任意多个字符，至少是一个
+*/
+
+func QueryArticlesWithTag(tag string) ([]Article,error) {
+	var articles []Article
+	db := database.GetDB()
+	db = db.Where("tags like '%&" + tag + "&%'")
+	db = db.Or(" tags like '%&" + tag + "'")
+	db = db.Or("tags like '" + tag + "&%'")
+	db = db.Or("tags like '" + tag + "'")
+	db = db.Find(&articles)
+	return articles,db.Error
+}
